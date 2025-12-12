@@ -1,12 +1,35 @@
 "use client"
 
-import { signOut, useSession } from "next-auth/react"
+import { signOut, useSession } from "@/lib/auth-client"
 import Link from "next/link"
+import { useEffect } from "react"
 
 export function AuthButton() {
-  const { data: session, status } = useSession()
+  const { data: session, isPending } = useSession()
+  
+  // #region agent log
+  useEffect(() => {
+    fetch('http://127.0.0.1:7243/ingest/0f661d19-0f97-4614-82fe-e84f3a13638c', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        location: 'components/auth-button.tsx:useSession',
+        message: 'useSession hook state (Better Auth)',
+        data: {
+          hypothesisId: 'D',
+          isPending,
+          hasSession: !!session,
+          sessionUser: session?.user ? { email: session.user.email, name: session.user.name } : null
+        },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'post-fix'
+      })
+    }).catch(() => {});
+  }, [session, isPending]);
+  // #endregion
 
-  if (status === "loading") {
+  if (isPending) {
     return (
       <div className="h-10 w-20 animate-pulse rounded-md bg-gray-200 dark:bg-zinc-800" />
     )
@@ -28,7 +51,7 @@ export function AuthButton() {
           </span>
         </div>
         <button
-          onClick={() => signOut({ callbackUrl: "/" })}
+          onClick={() => signOut()}
           className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700"
         >
           Sign Out

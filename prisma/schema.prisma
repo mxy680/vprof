@@ -15,7 +15,7 @@ model User {
   id            String    @id @default(cuid())
   name          String?
   email         String    @unique
-  emailVerified DateTime?
+  emailVerified Boolean   @default(false)
   image         String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -27,22 +27,26 @@ model User {
 }
 
 model Account {
-  id                String  @id @default(cuid())
+  id                String    @id @default(cuid())
   userId            String
-  type              String
+  type              String    @default("oauth")
   provider          String
+  providerId        String?   // Better Auth sends this - will be synced with provider via trigger
   providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
-  expires_at        Int?
-  token_type        String?
+  accountId         String    // Better Auth compatibility - should match providerAccountId
+  refreshToken      String?   @db.Text @map("refresh_token")
+  accessToken       String?   @db.Text @map("access_token")
+  accessTokenExpiresAt DateTime? @map("access_token_expires_at")
+  idToken           String?   @db.Text @map("id_token")
+  expires_at        Int?      @map("expires_at")
+  token_type        String?   @map("token_type")
   scope             String?
-  id_token          String? @db.Text
-  session_state     String?
+  session_state     String?   @map("session_state")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
+  @@unique([provider, accountId])
   @@map("account")
 }
 
@@ -63,6 +67,18 @@ model VerificationToken {
 
   @@unique([identifier, token])
   @@map("verificationToken")
+}
+
+model Verification {
+  id        String   @id @default(cuid())
+  identifier String
+  value     String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([identifier, value])
+  @@map("verification")
 }
 
 // Video Model
