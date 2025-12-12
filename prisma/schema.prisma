@@ -10,17 +10,20 @@ datasource db {
   provider = "postgresql"
 }
 
+// Better Auth Models
 model User {
   id            String    @id @default(cuid())
   name          String?
-  email         String?   @unique
+  email         String    @unique
   emailVerified DateTime?
   image         String?
-  accounts      Account[]
-  sessions      Session[]
-  videos        Video[]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+
+  accounts Account[]
+  sessions Session[]
+
+  @@map("user")
 }
 
 model Account {
@@ -40,7 +43,7 @@ model Account {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
-  @@index([userId])
+  @@map("account")
 }
 
 model Session {
@@ -50,7 +53,7 @@ model Session {
   expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId])
+  @@map("session")
 }
 
 model VerificationToken {
@@ -59,8 +62,10 @@ model VerificationToken {
   expires     DateTime
 
   @@unique([identifier, token])
+  @@map("verificationToken")
 }
 
+// Video Model
 model Video {
   id          String   @id @default(cuid())
   filename    String?
@@ -69,12 +74,9 @@ model Video {
   transcript  String?  @db.Text
   segments    Json?    // Whisper segments with timestamps
   voiceSample String?  // Path to voice sample file
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   @@index([status])
   @@index([createdAt])
-  @@index([userId])
 }

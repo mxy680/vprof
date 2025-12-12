@@ -1,13 +1,11 @@
 import NextAuth from "next-auth"
-import { PrismaAdapter } from "@auth/prisma-adapter"
-import { prisma } from "@/lib/prisma"
 import Google from "next-auth/providers/google"
 import GitHub from "next-auth/providers/github"
 import Credentials from "next-auth/providers/credentials"
 import type { NextAuthConfig } from "next-auth"
 
+// Base config for Edge Runtime (middleware) - no Prisma
 export const config = {
-  adapter: PrismaAdapter(prisma),
   providers: [
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID,
@@ -24,19 +22,8 @@ export const config = {
         password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
-        // For demo purposes - in production, use proper password hashing
-        // You can implement email/password auth with bcrypt here
-        if (!credentials?.email) {
-          return null
-        }
-        
-        // Check if user exists
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email as string }
-        })
-        
-        // For now, return null - implement proper password check
-        // In production, compare hashed password with bcrypt
+        // Credentials provider requires Prisma, so we'll disable it for Edge
+        // Use OAuth providers instead, or implement in API route
         return null
       }
     })
@@ -45,15 +32,22 @@ export const config = {
     signIn: "/auth/signin",
     error: "/auth/error",
   },
+  // Use JWT for Edge Runtime compatibility (middleware)
   session: {
-    strategy: "database",
+    strategy: "jwt",
   },
   callbacks: {
-    async session({ session, user }) {
-      if (session.user) {
-        session.user.id = user.id
+    async session({ session, token }) {
+      if (session.user && token?.sub) {
+        session.user.id = token.sub
       }
       return session
+    },
+    async jwt({ token, user, account }) {
+      if (user) {
+        token.sub = user.id
+      }
+      return token
     },
   },
 } satisfies NextAuthConfig

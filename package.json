@@ -12,6 +12,7 @@
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",
     "@prisma/client": "^7.1.0",
+    "better-auth": "^1.4.6",
     "next": "16.0.10",
     "next-auth": "^5.0.0-beta.30",
     "prisma": "^7.1.0",
