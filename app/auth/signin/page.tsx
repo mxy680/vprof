@@ -1,16 +1,15 @@
 "use client"
 
-import { signUp, signIn } from "@/lib/auth-client"
+import { signIn } from "@/lib/auth-client"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 
-export default function SignUpPage() {
+export default function SignInPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [formData, setFormData] = useState({
-    name: "",
     email: "",
     password: "",
   })
@@ -21,26 +20,25 @@ export default function SignUpPage() {
     try {
       setIsLoading(true)
       setError(null)
-      const { data, error: signUpError } = await signUp.email({
-        name: formData.name,
+      const { data, error: signInError } = await signIn.email({
         email: formData.email,
         password: formData.password,
         callbackURL: "/",
       })
 
-      if (signUpError) {
-        setError(signUpError.message || "Failed to sign up")
+      if (signInError) {
+        setError(signInError.message || "Failed to sign in")
         setIsLoading(false)
       } else {
         router.push("/")
       }
     } catch (err: any) {
-      setError(err?.message || "Failed to sign up")
+      setError(err?.message || "Failed to sign in")
       setIsLoading(false)
     }
   }
 
-  const handleGoogleSignUp = async () => {
+  const handleGoogleSignIn = async () => {
     try {
       setIsGoogleLoading(true)
       setError(null)
@@ -49,7 +47,7 @@ export default function SignUpPage() {
         callbackURL: "/",
       })
     } catch (err: any) {
-      setError(err?.message || "Failed to sign up with Google")
+      setError(err?.message || "Failed to sign in with Google")
       setIsGoogleLoading(false)
     }
   }
@@ -58,9 +56,9 @@ export default function SignUpPage() {
     <div className="flex min-h-screen items-center justify-center bg-background">
       <div className="w-full max-w-md space-y-8 rounded-lg border border-border bg-card p-8 shadow-lg">
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-foreground">Sign Up</h1>
+          <h1 className="text-3xl font-bold text-foreground">Sign In</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Create your account to get started
+            Sign in to your account to continue
           </p>
         </div>
 
@@ -71,7 +69,7 @@ export default function SignUpPage() {
         )}
 
         <button
-          onClick={handleGoogleSignUp}
+          onClick={handleGoogleSignIn}
           disabled={isGoogleLoading || isLoading}
           className="w-full rounded-md border border-border bg-background px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
         >
@@ -97,7 +95,7 @@ export default function SignUpPage() {
                   d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                 />
               </svg>
-              Signing up...
+              Signing in...
             </span>
           ) : (
             <span className="flex items-center justify-center">
@@ -124,7 +122,7 @@ export default function SignUpPage() {
                   fill="#EA4335"
                 />
               </svg>
-              Sign up with Google
+              Sign in with Google
             </span>
           )}
         </button>
@@ -139,21 +137,6 @@ export default function SignUpPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="name" className="block text-sm font-medium text-foreground mb-1">
-              Name
-            </label>
-            <input
-              id="name"
-              type="text"
-              required
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              placeholder="John Doe"
-            />
-          </div>
-
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-foreground mb-1">
               Email
@@ -177,15 +160,11 @@ export default function SignUpPage() {
               id="password"
               type="password"
               required
-              minLength={8}
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               placeholder="••••••••"
             />
-            <p className="mt-1 text-xs text-muted-foreground">
-              Must be at least 8 characters
-            </p>
           </div>
 
           <button
@@ -215,25 +194,22 @@ export default function SignUpPage() {
                     d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                   />
                 </svg>
-                Creating account...
+                Signing in...
               </span>
             ) : (
-              "Sign Up"
+              "Sign In"
             )}
           </button>
         </form>
 
         <div className="text-center text-sm">
-          <span className="text-muted-foreground">Already have an account? </span>
-          <Link href="/auth/signin" className="text-primary hover:underline">
-            Sign in
+          <span className="text-muted-foreground">Don't have an account? </span>
+          <Link href="/auth/signup" className="text-primary hover:underline">
+            Sign up
           </Link>
         </div>
-
-        <p className="text-center text-xs text-muted-foreground">
-          By signing up, you agree to our Terms of Service and Privacy Policy
-        </p>
       </div>
     </div>
   )
 }
+
