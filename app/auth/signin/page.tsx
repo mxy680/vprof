@@ -1,79 +1,67 @@
 "use client"
 
-import { signIn } from "@/lib/auth-client"
-import { useState } from "react"
+import { useAuth } from "@/lib/auth-client"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import Link from "next/link"
 
 export default function SignInPage() {
-  const [isLoading, setIsLoading] = useState(false)
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-  })
+  const [isLoading, setIsLoading] = useState(false)
+  const [checkingAuth, setCheckingAuth] = useState(true)
   const router = useRouter()
+  const auth = useAuth()
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    try {
-      setIsLoading(true)
-      setError(null)
-      const { data, error: signInError } = await signIn.email({
-        email: formData.email,
-        password: formData.password,
-        callbackURL: "/",
-      })
-
-      if (signInError) {
-        setError(signInError.message || "Failed to sign in")
-        setIsLoading(false)
-      } else {
+  // Redirect if already authenticated
+  useEffect(() => {
+    auth.getUser().then((user) => {
+      if (user) {
         router.push("/")
+      } else {
+        setCheckingAuth(false)
       }
-    } catch (err: any) {
-      setError(err?.message || "Failed to sign in")
+    })
+  }, [auth, router])
+
+  const handleGoogleSignIn = async () => {
+    setIsLoading(true)
+    setError(null)
+    const { error } = await auth.signInWithOAuth("google")
+    if (error) {
+      setError(error.message)
       setIsLoading(false)
     }
   }
 
-  const handleGoogleSignIn = async () => {
-    try {
-      setIsGoogleLoading(true)
-      setError(null)
-      await signIn.social({
-        provider: "google",
-        callbackURL: "/",
-      })
-    } catch (err: any) {
-      setError(err?.message || "Failed to sign in with Google")
-      setIsGoogleLoading(false)
-    }
+  if (checkingAuth) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-red-50 via-white to-red-50/60">
+        <div className="text-sm text-muted-foreground">Loading...</div>
+      </div>
+    )
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="w-full max-w-md space-y-8 rounded-lg border border-border bg-card p-8 shadow-lg">
-        <div className="text-center">
-          <h1 className="text-3xl font-bold text-foreground">Sign In</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Sign in to your account to continue
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-red-50 via-white to-red-50/60 p-4 font-sans">
+      <div className="w-full max-w-md space-y-6 rounded-xl border border-gray-200 bg-white/80 backdrop-blur-sm p-8 shadow-xl">
+        <div className="text-center space-y-2">
+          <h1 className="text-3xl font-normal tracking-tight text-gray-900">Welcome Back</h1>
+          <p className="text-sm text-gray-600 font-light">
+            Continue with your Google account
           </p>
         </div>
 
         {error && (
-          <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+          <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">
             {error}
           </div>
         )}
 
         <button
           onClick={handleGoogleSignIn}
-          disabled={isGoogleLoading || isLoading}
-          className="w-full rounded-md border border-border bg-background px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+          disabled={isLoading}
+          className="w-full rounded-lg bg-primary px-4 py-3 text-sm font-light text-primary-foreground transition-all hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 shadow-sm hover:shadow-md tracking-wide"
         >
-          {isGoogleLoading ? (
+          {isLoading ? (
             <span className="flex items-center justify-center">
               <svg
                 className="mr-2 h-4 w-4 animate-spin"
@@ -127,89 +115,13 @@ export default function SignInPage() {
           )}
         </button>
 
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t border-border" />
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
-          </div>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-foreground mb-1">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              required
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              placeholder="you@example.com"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-foreground mb-1">
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              required
-              value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              placeholder="••••••••"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full rounded-md bg-primary px-4 py-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {isLoading ? (
-              <span className="flex items-center justify-center">
-                <svg
-                  className="mr-2 h-4 w-4 animate-spin"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  />
-                </svg>
-                Signing in...
-              </span>
-            ) : (
-              "Sign In"
-            )}
-          </button>
-        </form>
-
-        <div className="text-center text-sm">
-          <span className="text-muted-foreground">Don't have an account? </span>
-          <Link href="/auth/signup" className="text-primary hover:underline">
-            Sign up
-          </Link>
-        </div>
+        <p className="text-center text-xs text-gray-500">
+          Don't have an account?{" "}
+          <a href="/auth/signup" className="text-primary font-medium hover:underline">
+            Create one
+          </a>
+        </p>
       </div>
     </div>
   )
 }
-
