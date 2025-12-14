@@ -7,18 +7,122 @@ datasource db {
   provider = "postgresql"
 }
 
-model Video {
+// User Profile - extends Supabase Auth user
+model Profile {
+  id        String   @id @default(cuid())
+  userId    String   @unique // Supabase Auth user ID
+  username  String?  @unique
+  avatar    String?
+  bio       String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  channels Channel[]
+  likes    Like[]
+  comments Comment[]
+
+  @@index([userId])
+  @@index([username])
+}
+
+// Channel - users can have multiple channels
+model Channel {
   id          String   @id @default(cuid())
-  filename    String?
-  url         String?
-  status      String   @default("processing")
-  transcript  String?
-  segments    Json?
-  voiceSample String?
+  name        String
+  handle      String   @unique // e.g., "@mit-opencourseware"
+  description String?
+  avatar      String?
+  banner      String?
+  subscriberCount Int   @default(0)
+  profileId   String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  // Relations
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  videos  Video[]
+
+  @@index([profileId])
+  @@index([handle])
+}
+
+// Category - video categories
+model Category {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  videos Video[]
+
+  @@index([slug])
+}
+
+// Video - main video content
+model Video {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  thumbnail   String?
+  youtubeUrl  String?   // YouTube video URL/ID
+  duration    Int?      // Duration in seconds
+  views       Int       @default(0)
+  status      String    @default("processing") // processing, ready, error
+  categoryId  String?
+  transcript  String?
+  segments    Json?
+  voiceSample String?
+  channelId   String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  channel  Channel   @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  category Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  likes    Like[]
+  comments Comment[]
+
+  @@index([channelId])
   @@index([status])
+  @@index([categoryId])
+  @@index([createdAt])
+  @@index([views])
+}
+
+// Like - user likes on videos
+model Like {
+  id        String   @id @default(cuid())
+  profileId String
+  videoId   String
+  createdAt DateTime @default(now())
+
+  // Relations
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  video   Video   @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, videoId])
+  @@index([profileId])
+  @@index([videoId])
+}
+
+// Comment - comments on videos
+model Comment {
+  id        String   @id @default(cuid())
+  content   String
+  profileId String
+  videoId   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  video   Video   @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+  @@index([videoId])
   @@index([createdAt])
 }
 
