@@ -1,9 +1,13 @@
+"use client"
+
 import Link from "next/link"
+import { useState } from "react"
 
 interface VideoCardProps {
   id: string
   title: string
   channel: string
+  channelAvatar?: string
   thumbnail?: string
   duration?: string
   views?: number
@@ -14,11 +18,19 @@ export function VideoCard({
   id,
   title,
   channel,
+  channelAvatar,
   thumbnail,
   duration,
   views,
   uploadedAt,
 }: VideoCardProps) {
+  const [avatarError, setAvatarError] = useState(false)
+
+  // Debug: Log avatar URL when component mounts
+  if (channelAvatar && typeof window !== 'undefined') {
+    console.log(`VideoCard ${id} - channelAvatar:`, channelAvatar)
+  }
+
   return (
     <Link href={`/watch/${id}`} className="group">
       <div className="flex flex-col cursor-pointer">
@@ -56,11 +68,41 @@ export function VideoCard({
         {/* Video Info */}
         <div className="flex gap-3">
           {/* Channel Avatar */}
-          <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
-            <span className="text-primary-foreground text-xs font-light">
-              {channel[0]?.toUpperCase() || "A"}
-            </span>
-          </div>
+          {channelAvatar && !avatarError ? (
+            <img
+              src={channelAvatar}
+              alt={channel}
+              className="w-9 h-9 rounded-full object-cover flex-shrink-0"
+              loading="lazy"
+              decoding="async"
+              referrerPolicy="no-referrer"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement
+                console.error("Failed to load channel avatar:", {
+                  url: channelAvatar,
+                  naturalWidth: target.naturalWidth,
+                  naturalHeight: target.naturalHeight,
+                  complete: target.complete,
+                  error: target.error,
+                })
+                setAvatarError(true)
+              }}
+              onLoad={(e) => {
+                const target = e.target as HTMLImageElement
+                console.log("Successfully loaded avatar:", {
+                  url: channelAvatar,
+                  naturalWidth: target.naturalWidth,
+                  naturalHeight: target.naturalHeight,
+                })
+              }}
+            />
+          ) : (
+            <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
+              <span className="text-primary-foreground text-xs font-light">
+                {channel[0]?.toUpperCase() || "A"}
+              </span>
+            </div>
+          )}
 
           {/* Title and Metadata */}
           <div className="flex-1 min-w-0">

@@ -26,7 +26,7 @@ model Profile {
   @@index([username])
 }
 
-// Channel - users can have multiple channels
+// Channel - can be a YouTube channel or user's channel
 model Channel {
   id          String   @id @default(cuid())
   name        String
@@ -35,12 +35,12 @@ model Channel {
   avatar      String?
   banner      String?
   subscriberCount Int   @default(0)
-  profileId   String
+  profileId   String?  // Optional - null for YouTube channels
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   // Relations
-  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  profile Profile? @relation(fields: [profileId], references: [id], onDelete: Cascade)
   videos  Video[]
 
   @@index([profileId])

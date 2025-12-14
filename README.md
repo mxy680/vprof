@@ -28,6 +28,11 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 
 # Optional: For server-side operations
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+
+# YouTube Data API (required for channel avatars)
+# Get your API key from: https://console.cloud.google.com/apis/credentials
+# Enable YouTube Data API v3 in your Google Cloud project
+YOUTUBE_API_KEY=your-youtube-api-key
 ```
 
 4. **Configure Supabase Auth:**

@@ -3,6 +3,7 @@
 import { useAuth } from "@/lib/auth-client"
 import { useRouter } from "next/navigation"
 import { useEffect, useState, useRef } from "react"
+import { AddVideoModal } from "./add-video-modal"
 
 export function Navbar() {
   const auth = useAuth()
@@ -145,10 +146,11 @@ export function Navbar() {
             <div className="text-sm font-light text-muted-foreground">Loading...</div>
           ) : user ? (
             <>
-              <button
-                className="flex items-center gap-2 px-4 py-2 rounded-full border border-gray-200 bg-background hover:bg-muted transition-colors text-sm font-light text-foreground"
-                aria-label="Add video"
-              >
+              <AddVideoModal>
+                <button
+                  className="flex items-center gap-2 px-4 py-2 rounded-full border border-gray-200 bg-background hover:bg-muted transition-colors text-sm font-light text-foreground"
+                  aria-label="Add video"
+                >
                 <svg
                   className="w-5 h-5"
                   fill="none"
@@ -161,7 +163,8 @@ export function Navbar() {
                   <path d="M12 4v16m8-8H4" />
                 </svg>
                 <span className="hidden sm:inline">Add Video</span>
-              </button>
+                </button>
+              </AddVideoModal>
               <button
                 className="p-2 rounded-full hover:bg-muted transition-colors relative"
                 aria-label="Notifications"

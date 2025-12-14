@@ -83,6 +83,7 @@ async function getVideos(categorySlug?: string | null) {
       id: video.id,
       title: video.title,
       channel: video.channel.name,
+      channelAvatar: video.channel.avatar || undefined,
       thumbnail: video.thumbnail || undefined,
       duration: formatDuration(video.duration),
       views: video.views,

@@ -4,6 +4,7 @@ interface Video {
   id: string
   title: string
   channel: string
+  channelAvatar?: string
   thumbnail?: string
   duration?: string
   views?: number
