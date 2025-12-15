@@ -7,59 +7,90 @@ interface VideoPlayerProps {
   title: string
 }
 
+declare global {
+  interface Window {
+    YT: any
+    onYouTubeIframeAPIReady: () => void
+  }
+}
+
 export function VideoPlayer({ youtubeVideoId, title }: VideoPlayerProps) {
-  const iframeRef = useRef<HTMLIFrameElement>(null)
+  const playerRef = useRef<any>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
   const [isPaused, setIsPaused] = useState(false)
   const qKeyPressedRef = useRef(false)
-  const iframeReadyRef = useRef(false)
+  const [playerReady, setPlayerReady] = useState(false)
 
-  // Wait for iframe to be ready
+  // Load YouTube IFrame API
   useEffect(() => {
-    const iframe = iframeRef.current
-    if (!iframe) return
-
-    const handleLoad = () => {
-      // Small delay to ensure iframe is fully ready
-      setTimeout(() => {
-        iframeReadyRef.current = true
-      }, 1000)
-    }
-
-    iframe.addEventListener("load", handleLoad)
-    return () => iframe.removeEventListener("load", handleLoad)
-  }, [])
-
-  const pauseVideo = useCallback(() => {
-    const iframe = iframeRef.current
-    if (!iframe || !iframeReadyRef.current) {
-      console.log("Iframe not ready yet")
+    if (window.YT && window.YT.Player) {
+      initializePlayer()
       return
     }
 
-    try {
-      // YouTube iframe API postMessage format
-      iframe.contentWindow?.postMessage(
-        JSON.stringify({
-          event: "command",
-          func: "pauseVideo",
-          args: "",
-        }),
-        "https://www.youtube.com"
-      )
-      setIsPaused(true)
-      console.log("Pause command sent")
-    } catch (error) {
-      console.error("Error pausing video:", error)
+    const tag = document.createElement("script")
+    tag.src = "https://www.youtube.com/iframe_api"
+    const firstScriptTag = document.getElementsByTagName("script")[0]
+    firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag)
+
+    window.onYouTubeIframeAPIReady = () => {
+      initializePlayer()
     }
   }, [])
+
+  const initializePlayer = () => {
+    if (!containerRef.current || playerRef.current) return
+
+    try {
+      const player = new window.YT.Player(containerRef.current, {
+        videoId: youtubeVideoId,
+        playerVars: {
+          rel: 0,
+          enablejsapi: 1,
+        },
+        events: {
+          onReady: () => {
+            setPlayerReady(true)
+            console.log("YouTube player ready")
+          },
+          onStateChange: (event: any) => {
+            // Track pause state
+            if (event.data === window.YT.PlayerState.PAUSED) {
+              setIsPaused(true)
+            } else if (event.data === window.YT.PlayerState.PLAYING) {
+              setIsPaused(false)
+            }
+          },
+        },
+      })
+      playerRef.current = player
+    } catch (error) {
+      console.error("Error initializing YouTube player:", error)
+    }
+  }
+
+  const pauseVideo = useCallback(() => {
+    if (playerRef.current && playerReady) {
+      try {
+        playerRef.current.pauseVideo()
+        setIsPaused(true)
+        console.log("Video paused via Q key")
+      } catch (error) {
+        console.error("Error pausing video:", error)
+      }
+    } else {
+      console.log("Player not ready yet")
+    }
+  }, [playerReady])
 
   // Handle Q key press/release
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Only trigger if Q key is pressed (case insensitive)
-      // Ignore if user is typing in an input field
       const target = e.target as HTMLElement
-      const isInput = target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable
+      const isInput =
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.isContentEditable
 
       if (e.key.toLowerCase() === "q" && !qKeyPressedRef.current && !isInput) {
         e.preventDefault()
@@ -72,11 +103,10 @@ export function VideoPlayer({ youtubeVideoId, title }: VideoPlayerProps) {
     const handleKeyUp = (e: KeyboardEvent) => {
       if (e.key.toLowerCase() === "q" && qKeyPressedRef.current) {
         qKeyPressedRef.current = false
-        setIsPaused(false)
+        // Keep paused state - don't auto-resume
       }
     }
 
-    // Use capture phase to catch events early
     document.addEventListener("keydown", handleKeyDown, true)
     document.addEventListener("keyup", handleKeyUp, true)
 
@@ -88,16 +118,8 @@ export function VideoPlayer({ youtubeVideoId, title }: VideoPlayerProps) {
 
   return (
     <div className="aspect-video w-full rounded-lg overflow-hidden bg-black relative">
-      <iframe
-        ref={iframeRef}
-        src={`https://www.youtube.com/embed/${youtubeVideoId}?rel=0&enablejsapi=1&origin=${typeof window !== 'undefined' ? window.location.origin : ''}`}
-        title={title}
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-        allowFullScreen
-        className="w-full h-full"
-        id={`youtube-player-${youtubeVideoId}`}
-      />
-      {isPaused && (
+      <div ref={containerRef} className="w-full h-full" />
+      {isPaused && qKeyPressedRef.current && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
           <div className="bg-black/70 rounded-lg px-4 py-2 text-white text-sm font-light">
             Video paused (holding Q)
