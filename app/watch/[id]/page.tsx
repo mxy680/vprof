@@ -70,6 +70,56 @@ export default async function WatchPage({ params }: WatchPageProps) {
   // Extract YouTube video ID
   const youtubeVideoId = video.youtubeUrl ? extractYouTubeVideoId(video.youtubeUrl) : null
 
+  // Fetch recommended videos (other videos, excluding current)
+  const recommendedVideos = await prisma.video.findMany({
+    where: {
+      status: "ready",
+      id: {
+        not: id,
+      },
+    },
+    include: {
+      channel: {
+        select: {
+          id: true,
+          name: true,
+          avatar: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+    take: 10,
+  })
+
+  // Format duration helper
+  function formatDuration(seconds: number | null | undefined): string | undefined {
+    if (!seconds) return undefined
+    const hours = Math.floor(seconds / 3600)
+    const minutes = Math.floor((seconds % 3600) / 60)
+    const secs = seconds % 60
+
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`
+    }
+    return `${minutes}:${secs.toString().padStart(2, "0")}`
+  }
+
+  // Format relative time helper
+  function formatRelativeTime(date: Date): string {
+    const now = new Date()
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000)
+
+    if (diffInSeconds < 60) return "just now"
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`
+    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)} days ago`
+    if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 604800)} weeks ago`
+    if (diffInSeconds < 31536000) return `${Math.floor(diffInSeconds / 2592000)} months ago`
+    return `${Math.floor(diffInSeconds / 31536000)} years ago`
+  }
+
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <Navbar />
@@ -284,9 +334,73 @@ export default async function WatchPage({ params }: WatchPageProps) {
               </div>
             </div>
 
-            {/* Sidebar */}
+            {/* Sidebar - Recommended Videos */}
             <div className="lg:col-span-1">
-              {/* Channel info and other details can go here */}
+              <div className="space-y-3">
+                {recommendedVideos.length > 0 ? (
+                  recommendedVideos.map((recVideo) => {
+                    const recYoutubeId = recVideo.youtubeUrl
+                      ? extractYouTubeVideoId(recVideo.youtubeUrl)
+                      : null
+                    return (
+                      <a
+                        key={recVideo.id}
+                        href={`/watch/${recVideo.id}`}
+                        className="flex gap-3 group"
+                      >
+                        {/* Thumbnail */}
+                        <div className="relative w-40 h-24 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+                          {recVideo.thumbnail ? (
+                            <img
+                              src={recVideo.thumbnail}
+                              alt={recVideo.title}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-red-50 to-red-100">
+                              <svg
+                                className="w-8 h-8 text-primary/30"
+                                fill="none"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="1.5"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                              >
+                                <path d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                                <path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                            </div>
+                          )}
+                          {recVideo.duration && (
+                            <div className="absolute bottom-1 right-1 bg-black/80 text-white text-xs font-light px-1 py-0.5 rounded">
+                              {formatDuration(recVideo.duration)}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Video Info */}
+                        <div className="flex-1 min-w-0 space-y-1">
+                          <h3 className="text-sm font-normal text-foreground line-clamp-2 group-hover:text-primary transition-colors">
+                            {recVideo.title}
+                          </h3>
+                          <p className="text-xs font-light text-muted-foreground">
+                            {recVideo.channel.name}
+                          </p>
+                          <p className="text-xs font-light text-muted-foreground">
+                            {recVideo.views.toLocaleString()} views •{" "}
+                            {formatRelativeTime(recVideo.createdAt)}
+                          </p>
+                        </div>
+                      </a>
+                    )
+                  })
+                ) : (
+                  <div className="text-sm font-light text-muted-foreground text-center py-8">
+                    No other videos available
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
