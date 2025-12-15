@@ -189,6 +189,37 @@ export function VideoPlayer({ youtubeVideoId, title }: VideoPlayerProps) {
           </div>
         </div>
       )}
+      {/* Fullscreen button overlay */}
+      <button
+        onClick={() => {
+          const container = containerRef.current?.parentElement
+          if (container) {
+            if (container.requestFullscreen) {
+              container.requestFullscreen()
+            } else if ((container as any).webkitRequestFullscreen) {
+              ;(container as any).webkitRequestFullscreen()
+            } else if ((container as any).mozRequestFullScreen) {
+              ;(container as any).mozRequestFullScreen()
+            } else if ((container as any).msRequestFullscreen) {
+              ;(container as any).msRequestFullscreen()
+            }
+          }
+        }}
+        className="absolute bottom-4 right-4 bg-black/70 hover:bg-black/90 text-white p-2 rounded-lg transition-colors z-20"
+        aria-label="Fullscreen"
+      >
+        <svg
+          className="w-5 h-5"
+          fill="none"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="1.5"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3" />
+        </svg>
+      </button>
     </div>
   )
 }
