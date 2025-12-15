@@ -33,6 +33,11 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 # Get your API key from: https://console.cloud.google.com/apis/credentials
 # Enable YouTube Data API v3 in your Google Cloud project
 YOUTUBE_API_KEY=your-youtube-api-key
+
+# OpenAI API (required for voice assistant transcription)
+# Get your API key from: https://platform.openai.com/api-keys
+# The voice assistant uses Whisper API for speech-to-text transcription
+OPENAI_API_KEY=your-openai-api-key
 ```
 
 4. **Configure Supabase Auth:**

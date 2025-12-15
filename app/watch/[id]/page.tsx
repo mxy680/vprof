@@ -331,14 +331,13 @@ export default async function WatchPage({ params }: WatchPageProps) {
                     Comments will be displayed here
                   </div>
                 </div>
-              </div>
             </div>
+          </div>
 
           {/* Recommended Videos Section */}
           <div className="max-w-4xl">
             <h2 className="text-lg font-normal text-foreground mb-4">Recommended Videos</h2>
             <div className="space-y-3">
-              <div className="space-y-3">
                 {recommendedVideos.length > 0 ? (
                   recommendedVideos.map((recVideo) => {
                     const recYoutubeId = recVideo.youtubeUrl
@@ -351,7 +350,7 @@ export default async function WatchPage({ params }: WatchPageProps) {
                         className="flex gap-3 group"
                       >
                         {/* Thumbnail */}
-                        <div className="relative w-40 h-24 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+                        <div className="relative w-40 h-24 rounded-lg overflow-hidden bg-muted shrink-0">
                           {recVideo.thumbnail ? (
                             <img
                               src={recVideo.thumbnail}
@@ -359,7 +358,7 @@ export default async function WatchPage({ params }: WatchPageProps) {
                               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                             />
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-red-50 to-red-100">
+                            <div className="w-full h-full flex items-center justify-center bg-linear-to-br from-red-50 to-red-100">
                               <svg
                                 className="w-8 h-8 text-primary/30"
                                 fill="none"

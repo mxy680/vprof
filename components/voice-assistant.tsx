@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
+import { PulseVoiceRecorder } from "@/components/ui/voice-recording"
 
 interface VoiceAssistantProps {
   videoId: string
@@ -11,88 +12,14 @@ export function VoiceAssistant({ videoId, videoTitle }: VoiceAssistantProps) {
   const [isRecording, setIsRecording] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
   const [isSpeaking, setIsSpeaking] = useState(false)
-  const recognitionRef = useRef<SpeechRecognition | null>(null)
+  const [isMounted, setIsMounted] = useState(false)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const audioChunksRef = useRef<Blob[]>([])
+  const streamRef = useRef<MediaStream | null>(null)
   const synthRef = useRef<SpeechSynthesis | null>(null)
+  const mimeTypeRef = useRef<string>("audio/webm")
 
-  useEffect(() => {
-    // Check if browser supports Web Speech API
-    if (typeof window !== "undefined") {
-      const SpeechRecognition =
-        window.SpeechRecognition || (window as any).webkitSpeechRecognition
-
-      if (SpeechRecognition) {
-        const recognition = new SpeechRecognition()
-        recognition.continuous = false
-        recognition.interimResults = false
-        recognition.lang = "en-US"
-
-        recognition.onresult = async (event: SpeechRecognitionEvent) => {
-          const transcript = event.results[0][0].transcript
-          setIsRecording(false)
-          setIsProcessing(true)
-
-          // Process the question and get answer
-          try {
-            const answer = await processQuestion(transcript, videoId, videoTitle)
-            speakAnswer(answer)
-          } catch (error) {
-            console.error("Error processing question:", error)
-            speakAnswer("Sorry, I encountered an error processing your question.")
-          } finally {
-            setIsProcessing(false)
-          }
-        }
-
-        recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-          console.error("Speech recognition error:", event.error)
-          setIsRecording(false)
-          setIsProcessing(false)
-          if (event.error === "no-speech") {
-            speakAnswer("I didn't hear anything. Please try again.")
-          } else {
-            speakAnswer("Sorry, there was an error with speech recognition.")
-          }
-        }
-
-        recognition.onend = () => {
-          setIsRecording(false)
-        }
-
-        recognitionRef.current = recognition
-      }
-
-      synthRef.current = window.speechSynthesis
-    }
-
-    return () => {
-      if (recognitionRef.current) {
-        recognitionRef.current.stop()
-      }
-      if (synthRef.current) {
-        synthRef.current.cancel()
-      }
-    }
-  }, [videoId, videoTitle])
-
-  const startRecording = () => {
-    if (recognitionRef.current && !isRecording && !isProcessing && !isSpeaking) {
-      try {
-        recognitionRef.current.start()
-        setIsRecording(true)
-      } catch (error) {
-        console.error("Error starting recognition:", error)
-      }
-    }
-  }
-
-  const stopRecording = () => {
-    if (recognitionRef.current && isRecording) {
-      recognitionRef.current.stop()
-      setIsRecording(false)
-    }
-  }
-
-  const speakAnswer = (text: string) => {
+  const speakAnswer = useCallback((text: string) => {
     if (synthRef.current) {
       synthRef.current.cancel() // Cancel any ongoing speech
 
@@ -115,47 +42,184 @@ export function VoiceAssistant({ videoId, videoTitle }: VoiceAssistantProps) {
 
       synthRef.current.speak(utterance)
     }
-  }
+  }, [])
 
-  const processQuestion = async (
-    question: string,
-    videoId: string,
-    videoTitle: string
-  ): Promise<string> => {
+  const processQuestion = useCallback(async (question: string): Promise<string> => {
     // TODO: Implement actual AI/question answering logic
     // For now, return a placeholder response
     return `Based on the video "${videoTitle}", I understand you asked: "${question}". This feature is currently being developed.`
-  }
+  }, [videoTitle])
 
-  const handleMouseDown = () => {
-    startRecording()
-  }
+  const transcribeAudio = useCallback(async (audioBlob: Blob): Promise<string> => {
+    try {
+      const formData = new FormData()
+      formData.append("audio", audioBlob, "recording.webm")
 
-  const handleMouseUp = () => {
-    stopRecording()
-  }
+      const response = await fetch("/api/transcribe", {
+        method: "POST",
+        body: formData,
+      })
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    e.preventDefault()
-    startRecording()
-  }
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || "Failed to transcribe audio")
+      }
 
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    e.preventDefault()
-    stopRecording()
-  }
+      const data = await response.json()
+      return data.transcript
+    } catch (error: any) {
+      console.error("Transcription error:", error)
+      throw error
+    }
+  }, [])
 
-  // Check if browser supports Web Speech API
+  useEffect(() => {
+    setIsMounted(true)
+
+    if (typeof window !== "undefined") {
+      synthRef.current = window.speechSynthesis
+    }
+
+    return () => {
+      // Cleanup: stop recording and release microphone
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+        mediaRecorderRef.current.stop()
+      }
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop())
+      }
+      if (synthRef.current) {
+        synthRef.current.cancel()
+      }
+    }
+  }, [])
+
+  const startRecording = useCallback(async () => {
+    try {
+      // Request microphone access
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      streamRef.current = stream
+
+      // Determine the best MIME type for the browser
+      let mimeType = "audio/webm"
+      if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
+        mimeType = "audio/webm;codecs=opus"
+      } else if (MediaRecorder.isTypeSupported("audio/webm")) {
+        mimeType = "audio/webm"
+      } else if (MediaRecorder.isTypeSupported("audio/mp4")) {
+        mimeType = "audio/mp4"
+      } else if (MediaRecorder.isTypeSupported("audio/ogg;codecs=opus")) {
+        mimeType = "audio/ogg;codecs=opus"
+      }
+
+      // Create MediaRecorder
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType,
+      })
+
+      mimeTypeRef.current = mimeType
+      audioChunksRef.current = []
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data)
+        }
+      }
+
+      mediaRecorder.onstop = async () => {
+        // Stop all tracks
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach((track) => track.stop())
+          streamRef.current = null
+        }
+
+        // Create audio blob with the same MIME type used for recording
+        const audioBlob = new Blob(audioChunksRef.current, {
+          type: mimeTypeRef.current,
+        })
+
+        setIsRecording(false)
+        setIsProcessing(true)
+
+        try {
+          // Transcribe audio using Whisper
+          const transcript = await transcribeAudio(audioBlob)
+
+          if (transcript.trim()) {
+            // Process the question
+            const answer = await processQuestion(transcript)
+            speakAnswer(answer)
+          } else {
+            speakAnswer("I didn't hear anything. Please try again.")
+          }
+        } catch (error: any) {
+          console.error("Error processing recording:", error)
+          let errorMessage = "Sorry, I encountered an error processing your question."
+
+          if (error.message?.includes("API key")) {
+            errorMessage = "OpenAI API key is not configured. Please check your environment variables."
+          } else if (error.message?.includes("transcribe")) {
+            errorMessage = "Failed to transcribe audio. Please try again."
+          }
+
+          speakAnswer(errorMessage)
+        } finally {
+          setIsProcessing(false)
+          audioChunksRef.current = []
+        }
+      }
+
+      mediaRecorderRef.current = mediaRecorder
+      mediaRecorder.start()
+      setIsRecording(true)
+    } catch (error: any) {
+      console.error("Error starting recording:", error)
+      setIsRecording(false)
+
+      let errorMessage = "Failed to access microphone."
+      if (error.name === "NotAllowedError" || error.name === "PermissionDeniedError") {
+        errorMessage = "Microphone permission denied. Please allow microphone access."
+      } else if (error.name === "NotFoundError" || error.name === "DevicesNotFoundError") {
+        errorMessage = "Microphone not found. Please check your microphone settings."
+      }
+
+      if (synthRef.current) {
+        speakAnswer(errorMessage)
+      }
+    }
+  }, [transcribeAudio, processQuestion, speakAnswer])
+
+  const stopRecording = useCallback(() => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop()
+    }
+  }, [])
+
+  const toggleRecording = useCallback(() => {
+    if (isProcessing || isSpeaking) return
+
+    if (isRecording) {
+      stopRecording()
+    } else {
+      startRecording()
+    }
+  }, [isRecording, isProcessing, isSpeaking, startRecording, stopRecording])
+
+  // Check if browser supports MediaRecorder and SpeechSynthesis
   const isSupported =
+    isMounted &&
     typeof window !== "undefined" &&
-    (window.SpeechRecognition || (window as any).webkitSpeechRecognition) &&
+    typeof MediaRecorder !== "undefined" &&
     window.speechSynthesis
 
-  if (!isSupported) {
+  // During SSR and initial render, show a consistent UI
+  if (!isMounted || !isSupported) {
     return (
       <div className="flex items-center justify-center h-full">
         <p className="text-sm font-light text-muted-foreground text-center">
-          Voice assistant is not supported in your browser
+          {!isMounted
+            ? "Loading..."
+            : "Voice assistant is not supported in your browser"}
         </p>
       </div>
     )
@@ -167,56 +231,12 @@ export function VoiceAssistant({ videoId, videoTitle }: VoiceAssistantProps) {
         <h3 className="text-sm font-normal text-foreground">Ask a Question</h3>
       </div>
 
-      <button
-        onMouseDown={handleMouseDown}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
+      <PulseVoiceRecorder
+        recording={isRecording}
+        onToggle={toggleRecording}
         disabled={isProcessing || isSpeaking}
-        className={`
-          w-20 h-20 rounded-full flex items-center justify-center transition-all duration-200
-          ${
-            isRecording
-              ? "bg-red-600 scale-110 shadow-lg shadow-red-600/50"
-              : isProcessing || isSpeaking
-                ? "bg-muted cursor-not-allowed"
-                : "bg-primary hover:bg-primary/90 cursor-pointer"
-          }
-        `}
-        aria-label={isRecording ? "Recording, release to stop" : "Hold to ask a question"}
-      >
-        {isProcessing ? (
-          <svg
-            className="w-8 h-8 text-foreground animate-spin"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <circle
-              className="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              strokeWidth="4"
-            />
-            <path
-              className="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-            />
-          </svg>
-        ) : (
-          <svg
-            className={`w-8 h-8 ${isRecording ? "text-white" : "text-primary-foreground"}`}
-            fill="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
-            <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
-          </svg>
-        )}
-      </button>
+        showDuration={false}
+      />
 
       {isRecording && (
         <div className="flex items-center gap-2 text-sm font-light text-red-600">
