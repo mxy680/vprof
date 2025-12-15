@@ -145,7 +145,7 @@ export default async function WatchPage({ params }: WatchPageProps) {
               )}
 
               {/* Video Info */}
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <h1 className="text-xl font-normal text-foreground">{video.title}</h1>
 
                 {/* Video Metadata */}
@@ -184,7 +184,7 @@ export default async function WatchPage({ params }: WatchPageProps) {
                       </p>
                     </div>
                   </div>
-                  <button className="rounded-full bg-background border border-gray-200 px-4 py-2 text-sm font-light text-foreground hover:bg-muted transition-colors">
+                  <button className="rounded-full bg-red-600 px-4 py-2 text-sm font-light text-white hover:bg-red-700 transition-colors">
                     Subscribe
                   </button>
                 </div>
@@ -201,7 +201,7 @@ export default async function WatchPage({ params }: WatchPageProps) {
                       viewBox="0 0 24 24"
                       stroke="currentColor"
                     >
-                      <path d="M7 11l5-5m0 0l5 5m-5-5v12" />
+                      <path d="M7 10v12M7 10l-4 4 4 4M7 10h14M17 10v12m0-12l4 4-4 4" />
                     </svg>
                     <span className="text-sm font-light text-foreground">Like</span>
                   </button>
@@ -215,7 +215,7 @@ export default async function WatchPage({ params }: WatchPageProps) {
                       viewBox="0 0 24 24"
                       stroke="currentColor"
                     >
-                      <path d="M7 13l5 5m0 0l5-5m-5 5V6" />
+                      <path d="M17 14v-12M17 14l4-4-4-4M17 14H3M3 14v12m0-12l-4 4 4 4" />
                     </svg>
                   </button>
                   <button className="flex items-center gap-2 px-4 py-2 rounded-full hover:bg-muted transition-colors">
