@@ -125,34 +125,35 @@ export default async function WatchPage({ params }: WatchPageProps) {
     <div className="flex min-h-screen flex-col bg-background">
       <Navbar />
       <main className="flex-1 px-4 py-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Video Player Section */}
-            <div className="lg:col-span-2">
-              <div className="flex gap-4 mb-4">
-                {youtubeVideoId ? (
-                  <div className="flex-1 aspect-video rounded-lg overflow-hidden bg-black">
-                    <iframe
-                      src={`https://www.youtube.com/embed/${youtubeVideoId}?rel=0`}
-                      title={video.title}
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; web-share"
-                      className="w-full h-full"
-                    />
-                  </div>
-                ) : (
-                  <div className="flex-1 aspect-video rounded-lg overflow-hidden bg-muted flex items-center justify-center">
-                    <p className="text-muted-foreground">Video not available</p>
-                  </div>
-                )}
-
-                {/* Voice Assistant */}
-                <div className="w-64 rounded-lg border border-gray-200 bg-background">
-                  <VoiceAssistant videoId={id} videoTitle={video.title} />
-                </div>
+        <div className="max-w-7xl mx-auto space-y-6">
+          {/* Video Player and Voice Assistant */}
+          <div className="flex gap-4">
+            {youtubeVideoId ? (
+              <div className="flex-1 aspect-video rounded-lg overflow-hidden bg-black">
+                <iframe
+                  src={`https://www.youtube.com/embed/${youtubeVideoId}?rel=0`}
+                  title={video.title}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; web-share"
+                  className="w-full h-full"
+                />
               </div>
+            ) : (
+              <div className="flex-1 aspect-video rounded-lg overflow-hidden bg-muted flex items-center justify-center">
+                <p className="text-muted-foreground">Video not available</p>
+              </div>
+            )}
 
-              {/* Video Info */}
-              <div className="space-y-3">
+            {/* Voice Assistant */}
+            <div className="w-64 rounded-lg border border-gray-200 bg-background">
+              <VoiceAssistant videoId={id} videoTitle={video.title} />
+            </div>
+          </div>
+
+          {/* Video Info Section */}
+          <div className="max-w-4xl">
+
+            {/* Video Info */}
+            <div className="space-y-3">
                 <h1 className="text-xl font-normal text-foreground">{video.title}</h1>
 
                 {/* Video Metadata */}
@@ -333,8 +334,10 @@ export default async function WatchPage({ params }: WatchPageProps) {
               </div>
             </div>
 
-            {/* Sidebar - Recommended Videos */}
-            <div className="lg:col-span-1">
+          {/* Recommended Videos Section */}
+          <div className="max-w-4xl">
+            <h2 className="text-lg font-normal text-foreground mb-4">Recommended Videos</h2>
+            <div className="space-y-3">
               <div className="space-y-3">
                 {recommendedVideos.length > 0 ? (
                   recommendedVideos.map((recVideo) => {
@@ -399,7 +402,6 @@ export default async function WatchPage({ params }: WatchPageProps) {
                     No other videos available
                   </div>
                 )}
-              </div>
             </div>
           </div>
         </div>
