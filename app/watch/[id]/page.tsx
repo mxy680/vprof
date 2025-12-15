@@ -45,6 +45,12 @@ export default async function WatchPage({ params }: WatchPageProps) {
           name: true,
           handle: true,
           avatar: true,
+          subscriberCount: true,
+        },
+      },
+      comments: {
+        select: {
+          id: true,
         },
       },
       category: {
