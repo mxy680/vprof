@@ -1,6 +1,7 @@
 import { getCurrentUser } from "@/lib/auth"
 import { redirect, notFound } from "next/navigation"
 import { Navbar } from "@/components/navbar"
+import { FullscreenVideoPlayer } from "@/components/fullscreen-video-player"
 import { prisma } from "@/lib/prisma"
 
 /**
@@ -129,13 +130,11 @@ export default async function WatchPage({ params }: WatchPageProps) {
             {/* Video Player Section */}
             <div className="lg:col-span-2">
               {youtubeVideoId ? (
-                <div className="aspect-video w-full rounded-lg overflow-hidden bg-black mb-4">
-                  <iframe
-                    src={`https://www.youtube.com/embed/${youtubeVideoId}?rel=0`}
+                <div className="mb-4">
+                  <FullscreenVideoPlayer
+                    youtubeVideoId={youtubeVideoId}
                     title={video.title}
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                    allowFullScreen
-                    className="w-full h-full"
+                    videoId={video.id}
                   />
                 </div>
               ) : (
