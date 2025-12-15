@@ -27,8 +27,7 @@ declare global {
 export function VideoPlayer({ youtubeVideoId, title }: VideoPlayerProps) {
   const playerRef = useRef<any>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-  const [isPaused, setIsPaused] = useState(false)
-  const qKeyPressedRef = useRef(false)
+  const [isFullscreen, setIsFullscreen] = useState(false)
   const [playerReady, setPlayerReady] = useState(false)
   const apiReadyRef = useRef(false)
 
@@ -91,8 +90,6 @@ export function VideoPlayer({ youtubeVideoId, title }: VideoPlayerProps) {
           rel: 0,
           enablejsapi: 1,
           playsinline: 1,
-          fs: 1, // Enable fullscreen button
-          controls: 1, // Show controls including fullscreen
         },
         events: {
           onReady: (event: any) => {
@@ -100,11 +97,7 @@ export function VideoPlayer({ youtubeVideoId, title }: VideoPlayerProps) {
             console.log("YouTube player ready, can pause:", typeof event.target.pauseVideo === "function")
           },
           onStateChange: (event: any) => {
-            if (event.data === window.YT.PlayerState.PAUSED) {
-              setIsPaused(true)
-            } else if (event.data === window.YT.PlayerState.PLAYING) {
-              setIsPaused(false)
-            }
+            // Track player state if needed
           },
           onError: (event: any) => {
             console.error("YouTube player error:", event.data)
@@ -125,57 +118,29 @@ export function VideoPlayer({ youtubeVideoId, title }: VideoPlayerProps) {
     }
   }, [youtubeVideoId, initializePlayer])
 
-  const pauseVideo = useCallback(() => {
-    if (!playerRef.current) {
-      console.log("No player instance")
-      return
-    }
-    if (!playerReady) {
-      console.log("Player not ready yet")
-      return
-    }
-
-    try {
-      console.log("Attempting to pause video")
-      playerRef.current.pauseVideo()
-      setIsPaused(true)
-      console.log("Pause command sent successfully")
-    } catch (error) {
-      console.error("Error pausing video:", error)
-    }
-  }, [playerReady])
-
-  // Handle Q key press/release
+  // Track fullscreen state
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement
-      const isInput =
-        target.tagName === "INPUT" ||
-        target.tagName === "TEXTAREA" ||
-        target.isContentEditable
-
-      if (e.key.toLowerCase() === "q" && !qKeyPressedRef.current && !isInput) {
-        e.preventDefault()
-        e.stopPropagation()
-        qKeyPressedRef.current = true
-        pauseVideo()
-      }
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement)
     }
 
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.key.toLowerCase() === "q" && qKeyPressedRef.current) {
-        qKeyPressedRef.current = false
-      }
-    }
-
-    document.addEventListener("keydown", handleKeyDown, true)
-    document.addEventListener("keyup", handleKeyUp, true)
+    document.addEventListener("fullscreenchange", handleFullscreenChange)
+    document.addEventListener("webkitfullscreenchange", handleFullscreenChange)
+    document.addEventListener("mozfullscreenchange", handleFullscreenChange)
+    document.addEventListener("MSFullscreenChange", handleFullscreenChange)
 
     return () => {
-      document.removeEventListener("keydown", handleKeyDown, true)
-      document.removeEventListener("keyup", handleKeyUp, true)
+      document.removeEventListener("fullscreenchange", handleFullscreenChange)
+      document.removeEventListener("webkitfullscreenchange", handleFullscreenChange)
+      document.removeEventListener("mozfullscreenchange", handleFullscreenChange)
+      document.removeEventListener("MSFullscreenChange", handleFullscreenChange)
     }
-  }, [pauseVideo])
+  }, [])
+
+  const handleMicClick = () => {
+    // TODO: Implement voice recognition
+    console.log("Mic button clicked")
+  }
 
   return (
     <div className="aspect-video w-full rounded-lg overflow-hidden bg-black relative">
@@ -184,54 +149,15 @@ export function VideoPlayer({ youtubeVideoId, title }: VideoPlayerProps) {
         id={`youtube-player-${youtubeVideoId}`}
         className="w-full h-full"
       />
-      {isPaused && qKeyPressedRef.current && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-          <div className="bg-black/70 rounded-lg px-4 py-2 text-white text-sm font-light">
-            Video paused (holding Q)
-          </div>
-        </div>
-      )}
-      {/* Fullscreen button overlay */}
-      {playerReady && (
+      {/* Microphone button - only show in fullscreen */}
+      {isFullscreen && (
         <button
-          onClick={() => {
-            if (playerRef.current) {
-              // Use YouTube player's fullscreen method if available
-              try {
-                const iframe = containerRef.current?.querySelector("iframe")
-                if (iframe && iframe.requestFullscreen) {
-                  iframe.requestFullscreen()
-                } else if (iframe && (iframe as any).webkitRequestFullscreen) {
-                  ;(iframe as any).webkitRequestFullscreen()
-                } else if (iframe && (iframe as any).mozRequestFullScreen) {
-                  ;(iframe as any).mozRequestFullScreen()
-                } else if (iframe && (iframe as any).msRequestFullscreen) {
-                  ;(iframe as any).msRequestFullscreen()
-                } else {
-                  // Fallback: fullscreen the container
-                  const container = containerRef.current?.parentElement
-                  if (container) {
-                    if (container.requestFullscreen) {
-                      container.requestFullscreen()
-                    } else if ((container as any).webkitRequestFullscreen) {
-                      ;(container as any).webkitRequestFullscreen()
-                    } else if ((container as any).mozRequestFullScreen) {
-                      ;(container as any).mozRequestFullScreen()
-                    } else if ((container as any).msRequestFullscreen) {
-                      ;(container as any).msRequestFullscreen()
-                    }
-                  }
-                }
-              } catch (error) {
-                console.error("Error entering fullscreen:", error)
-              }
-            }
-          }}
-          className="absolute bottom-4 right-4 bg-black/70 hover:bg-black/90 text-white p-2 rounded-lg transition-colors z-20"
-          aria-label="Fullscreen"
+          onClick={handleMicClick}
+          className="absolute top-4 right-4 bg-black/70 hover:bg-black/90 text-white p-3 rounded-full transition-colors z-50 shadow-lg"
+          aria-label="Voice input"
         >
           <svg
-            className="w-5 h-5"
+            className="w-6 h-6"
             fill="none"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -239,7 +165,7 @@ export function VideoPlayer({ youtubeVideoId, title }: VideoPlayerProps) {
             viewBox="0 0 24 24"
             stroke="currentColor"
           >
-            <path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3" />
+            <path d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
           </svg>
         </button>
       )}
